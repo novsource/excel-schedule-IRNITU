@@ -1,8 +1,8 @@
-import excel_worker
+import excel_worker as xlwork
 
 
 def main():
-    excel_worker.print_data_from_excel()
+    xlwork.find_cell_of_beginning_table()
 
 
 if __name__ == '__main__':
