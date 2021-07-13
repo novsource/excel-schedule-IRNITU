@@ -2,7 +2,7 @@ import excel_worker as xlwork
 
 
 def main():
-    xlwork.find_cell_of_beginning_table()
+    xlwork.get_started()
 
 
 if __name__ == '__main__':
