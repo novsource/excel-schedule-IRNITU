@@ -1,11 +1,9 @@
 import re
 import json
+import os
 from operator import attrgetter
 from xls2xlsx import XLS2XLSX
 from openpyxl import load_workbook
-
-
-book = load_workbook('data/1.xlsx')  # Рабочий файл
 
 pairs = {
     '8.15-9.45': 1,
@@ -13,7 +11,7 @@ pairs = {
     '12.05-13.35': 3,
     '13.45-15.15': 4,
     '15.25-16.55': 5,
-    '17.05 -18.35': 6
+    '17.05-18.35': 6
 }
 
 days = {
@@ -26,20 +24,36 @@ days = {
 }
 
 
+def get_started():
+    path = input('Введите путь к файлу: ')
+
+    if is_xls(path) is True:
+        path = convert_to_xlsx(path)
+
+    book = load_workbook(path)
+
+    for sheet_name in book.sheetnames:
+        if sheet_name != 'аудитории':
+            worksheet = book[sheet_name]
+            excel_into_json(worksheet)
+
+
 def convert_to_xlsx(path_to_file):
+    print('Файл с расширением .xls не поддерживается поэтому он будет конвертирован в файл с расширением .xlsx')
     x2x = XLS2XLSX(path_to_file)
     x2x.to_xlsx(path_to_file + 'x')
-    print('Файл успешно конвертирован!')
+    path = path_to_file+'x'
+    print('Файл успешно конвертирован к формату .xlsx!\n')
+    return path
 
 
-def print_data_from_excel():
-    for sheet_name in book.sheetnames:
-        worksheet = book[sheet_name]
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if cell.value is not None:
-                    print(cell.value)
-                    print('\t', end='')
+def is_xls(path_to_file):
+    name = os.path.basename(path_to_file)
+    name = str(name).split('.')
+    if name[1] == 'xls':
+        return True
+    else:
+        return False
 
 
 def get_cell_of_beginning_table(worksheet):
@@ -58,20 +72,10 @@ def get_students_group_from_sheet(worksheet):
 
     for row in worksheet.iter_rows(min_row=beg_table, max_row=beg_table, max_col=worksheet.max_column):
         for cell in row:
-            if (cell.value != None) and (cell.value != 'Учебная группа'):
+            if (cell.value is not None) and (cell.value != 'Учебная группа'):
                 groups_cells[cell.value] = cell
 
     return groups_cells
-
-
-def get_started():
-    for sheet_name in book.sheetnames:
-        worksheet = book[sheet_name]
-        #get_cells_schedule(worksheet)
-        # get_students_group_from_sheet(worksheet)
-        # printDataFromGroup(worksheet)
-        excel_into_json(worksheet)
-        # testMerged(worksheet)
 
 
 def get_cells_schedule(worksheet):
@@ -82,12 +86,10 @@ def get_cells_schedule(worksheet):
             value = str(cell.value).replace(" ", '')
             if days.get(value) == 1:
                 beg_table['Begin'] = cell
-                #print(f'Начало таблицы', cell)
             if days.get(value) == 6:
                 flag = True
-            if flag is True and pairs.get(str(worksheet.cell(row[0].row, 2).value)) == 6:
+            if flag is True and pairs.get(str(worksheet.cell(row[0].row, 2).value).replace(' ','')) == 6:
                 beg_table['End'] = worksheet.cell(cell.row+1, cell.column)
-                #print(f'Конец таблицы', worksheet.cell(cell.row+1, cell.column))
     return beg_table
 
 
@@ -97,25 +99,24 @@ def printDataFromGroup(worksheet):
     for row in range(1, worksheet.max_row):
         for col in range(1, worksheet.max_column):
             cell = worksheet.cell(row=row, column=col)
-            if (cell.value != None):
+            if cell.value is not None:
                 print(cell.value)
 
 
 def excel_into_json(worksheet):
+    print('Начало записи json')
+
     day = 0
     time_pair = 0
-
-    pair_week = {}
 
     groups_students = get_students_group_from_sheet(worksheet)
     groups = dict((k, {}) for k in list(groups_students.keys()))
 
-    json_out = {'pairs': pairs, 'schedule': groups}
+    json_out = {'pairs': {v: k for k, v in pairs.items()}, 'schedule': groups}
 
     for group in groups:
         json_2 = {}
         dict_in_json = {}
-        into = {}
 
         group_cell = groups_students.get(group)
 
@@ -137,7 +138,7 @@ def excel_into_json(worksheet):
                 time = worksheet.cell(row, 2)
                 cell = worksheet.cell(row, col)
 
-                if (cell.value is not None) and (cell.value != '\n') and (cell.value != ' ') and (cell.value != ''):
+                if is_empty(cell) is False:
                     pair_week = get_pair_week(worksheet, time, cell)
 
                     if dict_in_json.get(time_pair) is None and (pair_week is not None):
@@ -153,7 +154,7 @@ def excel_into_json(worksheet):
 
     with open('result.json', 'w', encoding='utf-8') as fp:
         json.dump(json_out, fp, indent=4, ensure_ascii=False)
-        print('Готово')
+        print('JSON-файл готов')
 
 
 def get_pair_week(worksheet, time, pair):
@@ -239,7 +240,7 @@ def get_audit(worksheet, pair):
     if len(audit_list) != 0:
         return audit_list
     else:
-        return None
+        return ['']
 
 
 def get_pair_title(pair):
@@ -253,3 +254,12 @@ def is_merged(worksheet, cell):
     for merged_cell in sorted(worksheet.merged_cell_ranges, key=attrgetter('coord')):
         if cell.coordinate in merged_cell:
             return True
+
+
+def is_empty(cell):
+    check = str(cell.value).replace(' ', '').replace('\n', '')
+    check = [x for x in check if x != '']
+    if len(check) != 0 and cell.value is not None:
+        return False
+    else:
+        return True
