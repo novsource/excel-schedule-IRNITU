@@ -112,13 +112,14 @@ def excel_into_json(worksheet):
             for col in range(group_cell.column, group_cell.column + 1):
                 time = worksheet.cell(row, 2)
                 cell = worksheet.cell(row, col)
-                audit = get_audit(worksheet, cell)
                 pair_week = get_pair_week(worksheet, time, cell)
 
 
 def get_pair_week(worksheet, time, pair):
     if is_merged(worksheet, pair) and pair.value != None:
+        title = get_pair_title(pair)
         teachers_list = get_teachers(pair)
+        audit_list = get_audit(worksheet, pair)
         return 0
     if (time.value != None) and (pair.value != None):
         return 1
@@ -144,12 +145,20 @@ def get_audit(worksheet, pair):
     if audit_cell.value != None and len(is_fisk) == 0: #  Если это не физкультура
         audit = str(audit_cell.value).replace('\n', ',').replace(' ', ',')
         audit_list = str(audit).split(',')
+        audit_list = [x for x in audit_list if x is not '']
     if len(is_fisk) != 0:
         audit_list = str(audit_cell.value).split(',')
     if len(audit_list) != 0:
         return audit_list
     else:
         return None
+
+
+def get_pair_title(pair):
+    regex = re.compile(r"[А-Я][а-я]*\s\w[.]\w[.]")
+    title = re.split(regex, str(pair.value))[0].replace('\n', '').strip()
+    if title != None:
+        return title
 
 
 def is_merged(worksheet, cell):
