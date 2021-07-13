@@ -111,21 +111,18 @@ def excel_into_json(worksheet):
         for row in range(23, worksheet.max_row):
             for col in range(group_cell.column, group_cell.column + 1):
                 time = worksheet.cell(row, 2)
-                audit = worksheet.cell(row, group_cell.column + 1).value
                 cell = worksheet.cell(row, col)
+                audit = get_audit(worksheet, cell)
                 pair_week = get_pair_week(worksheet, time, cell)
-                teachers_list = get_teachers(cell)
 
 
 def get_pair_week(worksheet, time, pair):
     if is_merged(worksheet, pair) and pair.value != None:
-        print('Пара еженедельная', pair.value)
+        teachers_list = get_teachers(pair)
         return 0
     if (time.value != None) and (pair.value != None):
-        print('Пара в четную неделю', pair.value)
         return 1
     if (time.value is None) and (pair.value != None):
-        print('Пара в нечетную неделю', pair.value)
         return 2
     if (pair.value == time.value is None):
         return None
@@ -136,6 +133,23 @@ def get_teachers(pair):
     teacher_list = re.findall(regex, str(pair.value))
     if teacher_list != None:
         return teacher_list
+
+
+def get_audit(worksheet, pair):
+    is_fisk = []
+    audit_list = []
+    audit_cell = worksheet.cell(96, pair.column + 1)
+    if audit_cell.value != None:
+        is_fisk = re.findall(r'стадион ИРНИТУ', audit_cell.value)
+    if audit_cell.value != None and len(is_fisk) == 0: #  Если это не физкультура
+        audit = str(audit_cell.value).replace('\n', ',').replace(' ', ',')
+        audit_list = str(audit).split(',')
+    if len(is_fisk) != 0:
+        audit_list = str(audit_cell.value).split(',')
+    if len(audit_list) != 0:
+        return audit_list
+    else:
+        return None
 
 
 def is_merged(worksheet, cell):
