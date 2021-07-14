@@ -168,23 +168,36 @@ def get_pair_week(worksheet, time, pair):
 
     audit_list = get_audit(worksheet, pair)
 
-    if is_merged(worksheet, pair) and pair.value != None:
-
+    if is_merged(worksheet, pair) and pair.value is not None:
+        if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
+            pair_dict = {'title': title,
+                         'teacher': teachers_list[0],
+                         'week': 1,
+                         'aud': [audit_list[0], audit_list[1]]}
+            list_out.append(pair_dict)
+            return list_out
         if len(teachers_list) > 1:
             for i in range(len(teachers_list)):
                 pair_dict = {'title': title,
-                            'teacher': teachers_list[i],
-                            'week': 0,
-                            'aud': [audit_list[i]]}
+                             'teacher': teachers_list[i],
+                             'week': 0,
+                             'aud': [audit_list[i]]}
                 list_out.append(pair_dict)
         else:
             pair_dict = {'title': title,
-                        'teacher': teachers_list[0],
-                        'week': 0,
-                        'aud': [audit_list[0]]}
+                         'teacher': teachers_list[0],
+                         'week': 0,
+                         'aud': [audit_list[0]]}
             list_out.append(pair_dict)
         return list_out
-    if (time.value != None) and (pair.value != None):
+    if (time.value is not None) and (pair.value is not None):
+        if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
+            pair_dict = {'title': title,
+                         'teacher': teachers_list[0],
+                         'week': 1,
+                         'aud': [audit_list[0], audit_list[1]]}
+            list_out.append(pair_dict)
+            return list_out
         if len(teachers_list) > 1:
             for i in range(len(teachers_list)):
                 pair_dict = {'title': title,
@@ -199,7 +212,14 @@ def get_pair_week(worksheet, time, pair):
                          'aud': [audit_list[0]]}
             list_out.append(pair_dict)
         return list_out
-    if (time.value is None) and (pair.value != None):
+    if (time.value is None) and (pair.value is not None):
+        if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
+            pair_dict = {'title': title,
+                         'teacher': teachers_list[0],
+                         'week': 1,
+                         'aud': [audit_list[0], audit_list[1]]}
+            list_out.append(pair_dict)
+            return list_out
         if len(teachers_list) > 1:
             for i in range(len(teachers_list)):
                 pair_dict = {'title': title,
@@ -236,7 +256,7 @@ def get_audit(worksheet, pair):
         audit_list = str(audit).split(',')
         audit_list = [aud for aud in audit_list if aud != '']
     if audit_cell.value != None and len(is_fisk) != 0:
-        audit_list = [audit_cell.value]
+        audit_list = str(audit_cell.value).split(',')
     if len(audit_list) != 0:
         return audit_list
     else:
