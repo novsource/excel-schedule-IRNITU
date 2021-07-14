@@ -226,10 +226,7 @@ def get_audit(worksheet, pair):
 
         for i in range(len(audit_list)):
             audit_list[i] = str(audit_list[i]).lstrip(' ')
-    if len(audit_list) != 0:
-        return audit_list
-    else:
-        return []
+    return audit_list
 
 
 def get_pair_title(pair):
