@@ -112,7 +112,7 @@ def excel_into_json(worksheet):
     groups_students = get_students_group_from_sheet(worksheet)
     groups = dict((k, {}) for k in list(groups_students.keys()))
 
-    json_out = {'pairs': {v: k for k, v in pairs.items()}, 'schedule': groups}
+    json_out = {'pairs': {v: k.replace('.', ':') for k, v in pairs.items()}, 'schedule': groups}
 
     for group in groups:
         json_2 = {}
@@ -239,24 +239,32 @@ def get_pair_week(worksheet, time, pair):
 
 
 def get_teachers(pair):
-    regex = re.compile(r"[А-Я][а-я]*\s\w[.]\w[.]")
+    regex = re.compile(r"[А-ЯЁ][а-яё]*\s\w[.]\w[.]")
+    pair.value = str(pair.value).replace(',', ' ')
     teacher_list = re.findall(regex, str(pair.value))
     if teacher_list != None:
         return teacher_list
 
 
 def get_audit(worksheet, pair):
-    is_fisk = []
+
+    is_fisk = [] # Физкультура
     audit_list = []
     audit_cell = worksheet.cell(pair.row, pair.column + 1)
+
     if audit_cell.value != None:
         is_fisk = re.findall(r'стадион ИРНИТУ', audit_cell.value)
+
     if audit_cell.value != None and len(is_fisk) == 0: #  Если это не физкультура
         audit = str(audit_cell.value).replace('\n', ',').replace(' ', ',')
         audit_list = str(audit).split(',')
         audit_list = [aud for aud in audit_list if aud != '']
+
     if audit_cell.value != None and len(is_fisk) != 0:
         audit_list = str(audit_cell.value).split(',')
+
+        for i in range(len(audit_list)):
+            audit_list[i] = str(audit_list[i]).lstrip(' ')
     if len(audit_list) != 0:
         return audit_list
     else:
@@ -264,7 +272,7 @@ def get_audit(worksheet, pair):
 
 
 def get_pair_title(pair):
-    regex = re.compile(r"[А-Я][а-я]*\s\w[.]\w[.]")
+    regex = re.compile(r"[А-ЯЁ][а-яё]*\s\w[.]\w[.]")
     title = re.split(regex, str(pair.value))[0].replace('\n', '').strip()
     if title != None:
         return title
