@@ -136,7 +136,9 @@ def excel_into_json(worksheet):
                         dict_in_json.update({time_pair: pair_week})
                     else:
                         if (pair_week is not None) and dict_in_json.get(time_pair) is not None:
-                            dict_in_json[time_pair].append(pair_week[0])
+                            for item in pair_week:
+                                dict_in_json[time_pair].append(item)
+
 
         if len(days_with_pairs) != 0:
             days_with_pairs.update({day: dict_in_json})
@@ -191,7 +193,6 @@ def get_dict_with_pair(title, teachers_list, audit_list, week):
                      'aud': [audit_list[0]]}
         list_out.append(pair_dict)
     return list_out
-
 
 
 def get_teachers(pair):
