@@ -139,7 +139,6 @@ def excel_into_json(worksheet):
                             for item in pair_week:
                                 dict_in_json[time_pair].append(item)
 
-
         if len(days_with_pairs) != 0:
             days_with_pairs.update({day: dict_in_json})
             json_out['schedule'].update({group: days_with_pairs})
@@ -187,10 +186,16 @@ def get_dict_with_pair(title, teachers_list, audit_list, week):
                          'aud': [audit_list[i]]}
             list_out.append(pair_dict)
     else:
-        pair_dict = {'title': title,
-                     'teacher': teachers_list[0],
-                     'week': week,
-                     'aud': [audit_list[0]]}
+        if len(audit_list) != 0:
+            pair_dict = {'title': title,
+                         'teacher': teachers_list[0],
+                         'week': week,
+                         'aud': [audit_list[0]]}
+        else:
+            pair_dict = {'title': title,
+                         'teacher': teachers_list[0],
+                         'week': week,
+                         'aud': []}
         list_out.append(pair_dict)
     return list_out
 
@@ -221,7 +226,10 @@ def get_audit(worksheet, pair):
 
         for i in range(len(audit_list)):
             audit_list[i] = str(audit_list[i]).lstrip(' ')
-    return audit_list
+    if len(audit_list) != 0:
+        return audit_list
+    else:
+        return []
 
 
 def get_pair_title(pair):
