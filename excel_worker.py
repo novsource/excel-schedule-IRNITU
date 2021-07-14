@@ -1,5 +1,4 @@
 import re
-import json
 import os
 from operator import attrgetter
 from xls2xlsx import XLS2XLSX
@@ -24,8 +23,8 @@ days = {
 }
 
 
-def get_started():
-    path = input('Введите путь к файлу: ')
+def get_json(path):
+    json_out = None
 
     if is_xls(path) is True:
         path = convert_to_xlsx(path)
@@ -35,14 +34,17 @@ def get_started():
     for sheet_name in book.sheetnames:
         if sheet_name != 'аудитории':
             worksheet = book[sheet_name]
-            excel_into_json(worksheet)
+            json_out = excel_into_json(worksheet)
+
+    return json_out
 
 
 def convert_to_xlsx(path_to_file):
     print('Файл с расширением .xls не поддерживается поэтому он будет конвертирован в файл с расширением .xlsx')
+
     x2x = XLS2XLSX(path_to_file)
     x2x.to_xlsx(path_to_file + 'x')
-    path = path_to_file+'x'
+    path = path_to_file + 'x'
     print('Файл успешно конвертирован к формату .xlsx!\n')
     return path
 
@@ -88,19 +90,9 @@ def get_cells_schedule(worksheet):
                 beg_table['Begin'] = cell
             if days.get(value) == 6:
                 flag = True
-            if flag is True and pairs.get(str(worksheet.cell(row[0].row, 2).value).replace(' ','')) == 6:
-                beg_table['End'] = worksheet.cell(cell.row+1, cell.column)
+            if flag is True and pairs.get(str(worksheet.cell(row[0].row, 2).value).replace(' ', '')) == 6:
+                beg_table['End'] = worksheet.cell(cell.row + 1, cell.column)
     return beg_table
-
-
-def printDataFromGroup(worksheet):
-    json_file_out = {'pairs': pairs, 'schedule': get_students_group_from_sheet(worksheet)}
-    items = get_students_group_from_sheet(worksheet).items()
-    for row in range(1, worksheet.max_row):
-        for col in range(1, worksheet.max_column):
-            cell = worksheet.cell(row=row, column=col)
-            if cell.value is not None:
-                print(cell.value)
 
 
 def excel_into_json(worksheet):
@@ -115,7 +107,7 @@ def excel_into_json(worksheet):
     json_out = {'pairs': {v: k.replace('.', ':') for k, v in pairs.items()}, 'schedule': groups}
 
     for group in groups:
-        json_2 = {}
+        days_with_pairs = {}
         dict_in_json = {}
 
         group_cell = groups_students.get(group)
@@ -123,11 +115,10 @@ def excel_into_json(worksheet):
         for row in range(get_cells_schedule(worksheet).get('Begin').row, get_cells_schedule(worksheet).get('End').row):
 
             if worksheet.cell(row, 1).value is not None:
-                into = dict(k for k in dict_in_json.items())
 
-                if len(into) != 0:
-                    json_2.update({day: into})
-                    dict_in_json.clear()
+                if len(dict_in_json) != 0:
+                    days_with_pairs.update({day: dict_in_json})
+                    dict_in_json = {}
 
                 day = str(days.get(str(worksheet.cell(row, 1).value).replace(' ', '')))
 
@@ -147,19 +138,14 @@ def excel_into_json(worksheet):
                         if (pair_week is not None) and dict_in_json.get(time_pair) is not None:
                             dict_in_json[time_pair].append(pair_week[0])
 
-        if len(json_2) != 0:
-            into = dict(k for k in dict_in_json.items())
-            json_2.update({day: into})
-            json_out['schedule'].update({group: json_2})
+        if len(days_with_pairs) != 0:
+            days_with_pairs.update({day: dict_in_json})
+            json_out['schedule'].update({group: days_with_pairs})
 
-    with open('result.json', 'w', encoding='utf-8') as fp:
-        json.dump(json_out, fp, indent=4, ensure_ascii=False)
-        print('JSON-файл готов')
+    return json_out
 
 
 def get_pair_week(worksheet, time, pair):
-    list_out = []
-
     title = get_pair_title(pair)
     teachers_list = get_teachers(pair)
 
@@ -169,73 +155,43 @@ def get_pair_week(worksheet, time, pair):
     audit_list = get_audit(worksheet, pair)
 
     if is_merged(worksheet, pair) and pair.value is not None:
-        if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
-            pair_dict = {'title': title,
-                         'teacher': teachers_list[0],
-                         'week': 1,
-                         'aud': [audit_list[0], audit_list[1]]}
-            list_out.append(pair_dict)
-            return list_out
-        if len(teachers_list) > 1:
-            for i in range(len(teachers_list)):
-                pair_dict = {'title': title,
-                             'teacher': teachers_list[i],
-                             'week': 0,
-                             'aud': [audit_list[i]]}
-                list_out.append(pair_dict)
-        else:
-            pair_dict = {'title': title,
-                         'teacher': teachers_list[0],
-                         'week': 0,
-                         'aud': [audit_list[0]]}
-            list_out.append(pair_dict)
+        list_out = get_dict_with_pair(title, teachers_list, audit_list, 0)
         return list_out
     if (time.value is not None) and (pair.value is not None):
-        if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
-            pair_dict = {'title': title,
-                         'teacher': teachers_list[0],
-                         'week': 1,
-                         'aud': [audit_list[0], audit_list[1]]}
-            list_out.append(pair_dict)
-            return list_out
-        if len(teachers_list) > 1:
-            for i in range(len(teachers_list)):
-                pair_dict = {'title': title,
-                             'teacher': teachers_list[i],
-                             'week': 1,
-                             'aud': [audit_list[i]]}
-                list_out.append(pair_dict)
-        else:
-            pair_dict = {'title': title,
-                         'teacher': teachers_list[0],
-                         'week': 1,
-                         'aud': [audit_list[0]]}
-            list_out.append(pair_dict)
+        list_out = get_dict_with_pair(title, teachers_list, audit_list, 1)
         return list_out
     if (time.value is None) and (pair.value is not None):
-        if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
-            pair_dict = {'title': title,
-                         'teacher': teachers_list[0],
-                         'week': 1,
-                         'aud': [audit_list[0], audit_list[1]]}
-            list_out.append(pair_dict)
-            return list_out
-        if len(teachers_list) > 1:
-            for i in range(len(teachers_list)):
-                pair_dict = {'title': title,
-                             'teacher': teachers_list[i],
-                             'week': 2,
-                             'aud': [audit_list[i]]}
-                list_out.append(pair_dict)
-        else:
-            pair_dict = {'title': title,
-                         'teacher': teachers_list[0],
-                         'week': 2,
-                         'aud': [audit_list[0]]}
-            list_out.append(pair_dict)
+        list_out = get_dict_with_pair(title, teachers_list, audit_list, 2)
         return list_out
-    if (pair.value == time.value is None):
+    if pair.value == time.value:
         return None
+
+
+def get_dict_with_pair(title, teachers_list, audit_list, week):
+    list_out = []
+
+    if len(teachers_list) <= 1 and len(audit_list) == 2:  # Физкультура
+        pair_dict = {'title': title,
+                     'teacher': teachers_list[0],
+                     'week': week,
+                     'aud': audit_list}
+        list_out.append(pair_dict)
+        return list_out
+    if len(teachers_list) > 1:
+        for i in range(len(teachers_list)):
+            pair_dict = {'title': title,
+                         'teacher': teachers_list[i],
+                         'week': week,
+                         'aud': [audit_list[i]]}
+            list_out.append(pair_dict)
+    else:
+        pair_dict = {'title': title,
+                     'teacher': teachers_list[0],
+                     'week': week,
+                     'aud': [audit_list[0]]}
+        list_out.append(pair_dict)
+    return list_out
+
 
 
 def get_teachers(pair):
@@ -247,34 +203,30 @@ def get_teachers(pair):
 
 
 def get_audit(worksheet, pair):
-
-    is_fisk = [] # Физкультура
+    is_fisk = []  # Физкультура
     audit_list = []
     audit_cell = worksheet.cell(pair.row, pair.column + 1)
 
-    if audit_cell.value != None:
+    if audit_cell.value is not None:
         is_fisk = re.findall(r'стадион ИРНИТУ', audit_cell.value)
 
-    if audit_cell.value != None and len(is_fisk) == 0: #  Если это не физкультура
+    if audit_cell.value is not None and len(is_fisk) == 0:  # Если это не физкультура
         audit = str(audit_cell.value).replace('\n', ',').replace(' ', ',')
         audit_list = str(audit).split(',')
         audit_list = [aud for aud in audit_list if aud != '']
 
-    if audit_cell.value != None and len(is_fisk) != 0:
+    if audit_cell.value is not None and len(is_fisk) != 0:
         audit_list = str(audit_cell.value).split(',')
 
         for i in range(len(audit_list)):
             audit_list[i] = str(audit_list[i]).lstrip(' ')
-    if len(audit_list) != 0:
-        return audit_list
-    else:
-        return ['']
+    return audit_list
 
 
 def get_pair_title(pair):
     regex = re.compile(r"[А-ЯЁ][а-яё]*\s\w[.]\w[.]")
     title = re.split(regex, str(pair.value))[0].replace('\n', '').strip()
-    if title != None:
+    if title is not None:
         return title
 
 
